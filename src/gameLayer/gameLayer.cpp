@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 #include <filesystem>
+#include <player.h>
 
 // const char* RESOURCES_PATH = "~/Documents/Coding\ Projects/Platformer\ game/cmakeSetup/resources";
 
@@ -34,6 +35,11 @@ gl2d::Texture minecraft;
 gl2d::Texture knightTexture;
 gl2d::TextureAtlasPadding knightAtlas;
 
+
+Player knight;
+
+
+
 bool initGame()
 {
 	//initializing stuff for the renderer
@@ -44,7 +50,7 @@ bool initGame()
 	knightTexture.loadFromFileWithPixelPadding(RESOURCES_PATH "brackeys/sprites/knight.png", 32, true);
 	knightAtlas = gl2d::TextureAtlasPadding(8, 8, knightTexture.GetSize().x, knightTexture.GetSize().y);
 
-	minecraft.loadFromFile(RESOURCES_PATH "test.jpg", 128, true);
+	knight.spawn();
 
 	//loading the saved data. Loading an entire structure like this makes savind game data very easy.
 	platform::readEntireFile(RESOURCES_PATH "gameData.data", &gameData, sizeof(GameData));
@@ -76,6 +82,8 @@ bool gameLogic(float deltaTime, platform::Input &input)
 
 	//you can also do platform::isButtonHeld(platform::Button::Left)
 
+#pragma region movement
+
 	if (input.isButtonHeld(platform::Button::Left))
 	{
 		gameData.rectPos.x -= deltaTime * 100;
@@ -93,18 +101,42 @@ bool gameLogic(float deltaTime, platform::Input &input)
 		gameData.rectPos.y += deltaTime * 100;
 	}
 
-	gameData.rectPos = glm::clamp(gameData.rectPos, glm::vec2{0,0}, glm::vec2{w - 100,h - 100});
-	renderer.renderRectangle({gameData.rectPos, 100, 100}, knightTexture, Colors_White, {}, 0, knightAtlas.get(1, 1));
+	knight.update(deltaTime, input);
+
+
+
+#pragma endregion
+
+
+
+	gameData.rectPos = glm::clamp(gameData.rectPos, glm::vec2{0,0}, glm::vec2{w - 100,h - 100});	
+
+	knight.render(
+		renderer,
+		gameData.rectPos,
+		100, //size
+		knightTexture,
+		knightAtlas
+	);
+
+	// renderer.renderRectangle({gameData.rectPos, 100, 100}, knightTexture, Colors_White, {}, 0, knightAtlas.get(0, 0));
+	// renderer.renderRectangle({gameData.rectPos, 100, 100}, knightTexture);
 	// renderer.renderRectangle({gameData.rectPos, 100, 100}, Colors_Blue);
 
 	renderer.flush();
-
 
 	//ImGui::ShowDemoWindow();
 	ImGui::PushMakeWindowNotTransparent();
 	ImGui::Begin("Test Imgui");
 
 	ImGui::DragFloat2("Positions", &gameData.rectPos[0]);
+	ImGui::DragFloat2("Direction (x, y)", &knight.forcingDirection.x);
+	// ImGui::Int("SpriteIndex", &*knight.spriteIndex);
+
+	ImGui::Text("Sprite Index %d", *knight.spriteIndex);
+
+	ImGui::Text("Is Moving? %d", knight.isMoving);
+	ImGui::Text("Is Idle? %d", knight.isIdle);
 
 	ImGui::Text("Emoji moment: " ICON_FK_AMBULANCE);
 
